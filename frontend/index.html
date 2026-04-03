@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pesa API — Personal Finance Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       HEADER (always visible)
+  ═══════════════════════════════════════════════════════════ -->
+  <header>
+    <a class="logo" href="#">
+      <div class="logo-icon">💰</div>
+      <span class="logo-text">Pesa API</span>
+      <span class="logo-badge">v1.0</span>
+    </a>
+    <nav id="nav-auth-actions" style="display:none">
+      <span style="color:var(--text-secondary);font-size:.875rem;margin-right:8px">
+        Hey, <strong id="user-name" style="color:var(--text-primary)">User</strong>
+      </span>
+      <a href="/api/v1/docs" target="_blank" class="btn btn-ghost btn-sm">API Docs ↗</a>
+      <button id="btn-logout" class="btn btn-ghost btn-sm">Logout</button>
+    </nav>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       VIEW: LOGIN
+  ═══════════════════════════════════════════════════════════ -->
+  <div id="view-login" class="view">
+    <div class="auth-wrapper">
+      <div class="glass auth-card">
+        <h2>Welcome back</h2>
+        <p>Sign in to your Pesa API dashboard</p>
+
+        <form id="form-login">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" name="email" placeholder="wanjiku@example.com"
+                   value="wanjiku@example.com" required />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" name="password" placeholder="••••••••"
+                   value="password123" required />
+          </div>
+          <button type="submit" class="btn btn-primary full-width" style="margin-top:8px">
+            Sign In →
+          </button>
+        </form>
+
+        <p class="auth-toggle">
+          No account? <a onclick="showView('view-register')">Create one</a>
+        </p>
+
+        <div style="margin-top:20px;padding:14px;border-radius:10px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.15)">
+          <p style="font-size:.75rem;color:var(--text-muted);margin-bottom:4px">Demo credentials (pre-filled)</p>
+          <code style="font-size:.75rem;color:var(--accent-violet)">wanjiku@example.com / password123</code>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       VIEW: REGISTER
+  ═══════════════════════════════════════════════════════════ -->
+  <div id="view-register" class="view">
+    <div class="auth-wrapper">
+      <div class="glass auth-card">
+        <h2>Create account</h2>
+        <p>Start tracking your finances today</p>
+
+        <form id="form-register">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" name="full_name" placeholder="Your name" />
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" name="email" placeholder="you@example.com" required />
+          </div>
+          <div class="form-group">
+            <label>Password <span class="text-muted">(min 8 chars)</span></label>
+            <input type="password" name="password" minlength="8" required />
+          </div>
+          <button type="submit" class="btn btn-primary full-width" style="margin-top:8px">
+            Create Account →
+          </button>
+        </form>
+
+        <p class="auth-toggle">
+          Have an account? <a onclick="showView('view-login')">Sign in</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       VIEW: DASHBOARD
+  ═══════════════════════════════════════════════════════════ -->
+  <div id="view-dashboard" class="view">
+
+    <!-- Dashboard header -->
+    <div class="dashboard-header">
+      <div>
+        <h1>Finance <span>Dashboard</span></h1>
+        <p>Your money, your data, your API.</p>
+      </div>
+      <button class="btn btn-primary" onclick="openModal('modal-add-tx')">
+        + Add Transaction
+      </button>
+    </div>
+
+    <!-- Summary stats (populated by analytics) -->
+    <div class="stats-grid">
+      <div class="glass stat-card">
+        <div class="stat-label">💚 Total Income</div>
+        <div id="stat-income" class="stat-value income">KES —</div>
+        <div class="stat-sub">Last 3 months</div>
+      </div>
+      <div class="glass stat-card">
+        <div class="stat-label">🔴 Total Expenses</div>
+        <div id="stat-expense" class="stat-value expense">KES —</div>
+        <div class="stat-sub">Last 3 months</div>
+      </div>
+      <div class="glass stat-card">
+        <div class="stat-label">⚡ Net Balance</div>
+        <div id="stat-net" class="stat-value neutral">KES —</div>
+        <div class="stat-sub">Income − Expenses</div>
+      </div>
+      <div class="glass stat-card">
+        <div class="stat-label">🎯 Active Budgets</div>
+        <div id="stat-budgets" class="stat-value neutral">—</div>
+        <div class="stat-sub">This month</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-bar">
+      <button class="tab active" data-tab="transactions">💳 Transactions</button>
+      <button class="tab"        data-tab="budgets">🎯 Budgets</button>
+      <button class="tab"        data-tab="analytics">📊 Analytics</button>
+      <div id="tab-indicator"></div>
+    </div>
+
+    <!-- Tab: Transactions -->
+    <div class="tab-content active" data-content="transactions">
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">
+            <span class="icon">💳</span> Transactions
+            <span id="tx-count" style="font-size:.75rem;color:var(--text-muted);font-weight:400"></span>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="openModal('modal-add-tx')">+ New</button>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-bar">
+          <select id="filter-type">
+            <option value="">All types</option>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+          <select id="filter-category">
+            <option value="">All categories</option>
+            <option>Salary</option><option>Freelance</option>
+            <option>Food</option><option>Transport</option>
+            <option>Rent</option><option>Utilities</option>
+            <option>Airtime</option><option>Shopping</option>
+            <option>Eating Out</option><option>Healthcare</option>
+            <option>Entertainment</option><option>Education</option>
+            <option>Savings</option><option>Other</option>
+          </select>
+        </div>
+
+        <div class="glass" style="padding:8px 4px">
+          <div id="tx-list"></div>
+          <div id="tx-pager"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Budgets -->
+    <div class="tab-content" data-content="budgets">
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title"><span class="icon">🎯</span> Monthly Budgets</div>
+          <button class="btn btn-ghost btn-sm" onclick="openModal('modal-add-budget')">+ New Budget</button>
+        </div>
+        <div id="budget-grid" class="budget-grid"></div>
+      </div>
+    </div>
+
+    <!-- Tab: Analytics -->
+    <div class="tab-content" data-content="analytics">
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title"><span class="icon">📊</span> Analytics</div>
+          <button class="btn btn-ghost btn-sm" onclick="renderAnalyticsPanel()">↻ Refresh</button>
+        </div>
+        <div id="analytics-content"></div>
+      </div>
+    </div>
+
+  </div><!-- /view-dashboard -->
+
+</div><!-- /app -->
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODALS
+═══════════════════════════════════════════════════════════ -->
+
+<!-- Add Transaction Modal -->
+<div id="modal-add-tx" class="modal-overlay">
+  <div class="glass modal">
+    <div class="modal-header">
+      <h3>💳 New Transaction</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-add-tx')">✕</button>
+    </div>
+    <form id="form-add-tx">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Amount</label>
+          <input type="number" name="amount" step="0.01" min="0.01" placeholder="0.00" required />
+        </div>
+        <div class="form-group">
+          <label>Currency</label>
+          <select name="currency">
+            <option value="KES" selected>KES</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+            <option value="GBP">GBP</option>
+            <option value="UGX">UGX</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Type</label>
+          <select name="type" required>
+            <option value="expense">Expense</option>
+            <option value="income">Income</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select name="category" required>
+            <option value="">Select…</option>
+            <optgroup label="Income">
+              <option>Salary</option>
+              <option>Freelance</option>
+            </optgroup>
+            <optgroup label="Expenses">
+              <option>Food</option><option>Transport</option>
+              <option>Rent</option><option>Utilities</option>
+              <option>Airtime</option><option>Shopping</option>
+              <option>Eating Out</option><option>Healthcare</option>
+              <option>Entertainment</option><option>Education</option>
+              <option>Savings</option><option>Other</option>
+            </optgroup>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Description <span class="text-muted">(optional)</span></label>
+        <input type="text" name="description" placeholder="e.g. Naivas groceries" maxlength="200" />
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button type="button" class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-add-tx')">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="flex:2">Save Transaction →</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Budget Modal -->
+<div id="modal-add-budget" class="modal-overlay">
+  <div class="glass modal">
+    <div class="modal-header">
+      <h3>🎯 New Budget</h3>
+      <button class="btn btn-ghost btn-icon" onclick="closeModal('modal-add-budget')">✕</button>
+    </div>
+    <form id="form-add-budget">
+      <div class="form-group">
+        <label>Category</label>
+        <select name="category" required>
+          <option value="">Select category…</option>
+          <option>Food</option><option>Transport</option>
+          <option>Rent</option><option>Utilities</option>
+          <option>Airtime</option><option>Shopping</option>
+          <option>Eating Out</option><option>Healthcare</option>
+          <option>Entertainment</option><option>Education</option>
+          <option>Other</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Limit (KES)</label>
+          <input type="number" name="limit_amount" step="100" min="1" placeholder="5000" required />
+        </div>
+        <div class="form-group">
+          <label>Period</label>
+          <select name="period">
+            <option value="monthly" selected>Monthly</option>
+            <option value="weekly">Weekly</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Start Date</label>
+        <input type="date" name="start_date" required />
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:8px">
+        <button type="button" class="btn btn-ghost" style="flex:1" onclick="closeModal('modal-add-budget')">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="flex:2">Create Budget →</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- Toast container -->
+<div id="toast-container" class="toast-container"></div>
+
+<script src="app.js"></script>
+<script>
+  // Set today's date as default for budget start date
+  document.addEventListener('DOMContentLoaded', () => {
+    const d = document.querySelector('[name="start_date"]');
+    if (d) d.valueAsDate = new Date();
+
+    // Show nav when logged in
+    const origEnter = window.enterDashboard;
+    window.enterDashboard = function() {
+      document.getElementById('nav-auth-actions').style.display = 'flex';
+      origEnter && origEnter();
+    };
+
+    // Update budget count stat
+    const origRenderBudgets = window.renderBudgets;
+    window.renderBudgets = function(budgets) {
+      document.getElementById('stat-budgets').textContent = budgets.length;
+      origRenderBudgets && origRenderBudgets(budgets);
+    };
+  });
+</script>
+
+</body>
+</html>

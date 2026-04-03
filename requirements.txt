@@ -1,0 +1,32 @@
+# =============================================================================
+# Pesa API — Python dependencies
+# =============================================================================
+# Pin major.minor but not patch for security updates.
+# Run: pip install -r requirements.txt
+
+# --- Web framework ---
+fastapi==0.111.*          # FastAPI: async-first, OpenAPI auto-docs, Pydantic v2 integration
+uvicorn[standard]==0.29.* # ASGI server; [standard] adds uvloop + httptools for speed
+
+# --- Database ---
+sqlalchemy==2.0.*         # SQLAlchemy 2.0: fully async ORM + Core
+asyncpg==0.29.*           # Async PostgreSQL driver (C extension, very fast)
+alembic==1.13.*           # DB migration tool (pairs with SQLAlchemy)
+
+# --- Auth ---
+python-jose[cryptography]==3.3.*  # JWT encode/decode
+bcrypt==4.2.*                     # Password hashing — used directly (passlib 1.7.x is
+                                  # incompatible with bcrypt 4.x due to a 72-byte limit
+                                  # in passlib's detect_wrap_bug() internal check)
+
+# --- Validation ---
+pydantic==2.*             # Pydantic v2: data validation and serialisation (Rust core)
+pydantic-settings==2.*    # Reads .env into Pydantic Settings models
+email-validator==2.*      # EmailStr validation in Pydantic
+
+# --- HTTP client (for health checks, webhooks) ---
+httpx==0.27.*             # Async-capable HTTP client; also used by FastAPI TestClient
+
+# --- Utilities ---
+python-multipart==0.0.*   # Required for Form() data parsing in FastAPI
+python-dotenv==1.0.*      # Load .env file in development
