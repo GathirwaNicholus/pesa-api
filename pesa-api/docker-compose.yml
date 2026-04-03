@@ -1,0 +1,99 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Pesa API — Docker Compose
+# Run the full stack locally with: docker compose up --build
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── PostgreSQL Database ─────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    # postgres:16-alpine is the lightest official Postgres image (~90MB)
+    container_name: pesa-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     ${POSTGRES_USER:-pesa}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pesa}
+      POSTGRES_DB:       ${POSTGRES_DB:-pesadb}
+      # ${VAR:-default}: use the env var if set, otherwise use the default.
+      # This means docker-compose works out of the box without a .env file.
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Named volume: data persists across container restarts and rebuilds.
+      # Without this, your DB is wiped every time you run `docker compose down`.
+      - ./sql/001_init.sql:/docker-entrypoint-initdb.d/001_init.sql
+      - ./sql/002_seed.sql:/docker-entrypoint-initdb.d/002_seed.sql
+      # /docker-entrypoint-initdb.d/: Postgres runs all *.sql files in this
+      # directory alphabetically on FIRST startup (when the data volume is empty).
+      # This is how we apply migrations automatically in dev.
+    ports:
+      - "5433:5432"
+      # Expose to host so you can connect with DBeaver / psql / TablePlus
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pesa} -d ${POSTGRES_DB:-pesadb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+      # The API service won't start until this healthcheck passes.
+
+  # ── FastAPI Application ─────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pesa-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+        # condition: service_healthy means Docker waits for the DB healthcheck
+        # to pass before starting the API. Without this, the API might start
+        # before Postgres is ready and crash with "connection refused".
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-pesa}:${POSTGRES_PASSWORD:-pesa}@db:5432/${POSTGRES_DB:-pesadb}
+      # Note the hostname is 'db' — the service name above.
+      # Docker Compose creates an internal DNS entry for each service name.
+      SECRET_KEY: ${SECRET_KEY:-dev_secret_change_in_production_32chars}
+      DEBUG: ${DEBUG:-false}
+      ALLOWED_ORIGINS: '["http://localhost:8080","http://localhost:3000","http://localhost:8000"]'
+      LIB_PATH: ./cpp/libfinance.so
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./api:/app/api
+      - ./frontend:/app/frontend
+      # Development hot-reload: mount source into the container.
+      # Changes to Python files are reflected without rebuilding the image.
+      # (Works with --reload flag — see dev override below)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Nginx (serves the frontend SPA) ────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: pesa-nginx
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+      # Access the frontend at http://localhost:8080
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    # WHY Nginx for the frontend?
+    # Nginx serves static files ~10x faster than Python.
+    # It also proxies /api/ calls to the FastAPI container,
+    # which avoids CORS issues in development.
+
+# ── Named volumes ───────────────────────────────────────────
+volumes:
+  postgres_data:
+    # This volume persists even after `docker compose down`.
+    # Use `docker compose down -v` to also remove the volume (wipe the DB).
