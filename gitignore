@@ -1,0 +1,20 @@
+# Environment — NEVER commit secrets
+.env
+
+# Compiled C++ library — built during Docker build, not stored in git
+cpp/libfinance.so
+cpp/test_engine
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
